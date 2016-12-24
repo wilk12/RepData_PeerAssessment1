@@ -8,17 +8,13 @@ output:
 
 ## Loading and preprocessing the data
 ```{r}
-mainDir <- getwd()
-
 url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
 download.file(url, "activity_monitoring_data.zip")
-ifelse(!dir.exists(file.path(mainDir, "RepData_PeerAssessment1")),
-       dir.create(file.path(mainDir, "RepData_PeerAssessment1")), FALSE)
-unzip("activity_monitoring_data.zip", exdir = "./RepData_PeerAssessment1")
-setwd("./RepData_PeerAssessment1")
+unzip("activity_monitoring_data.zip")
 
 activity <- read.csv("activity.csv")
 ```
+
 ### Here is a histogram showing the total number of steps taken each day
 ```{r}
 daystep <- aggregate(activity$steps~activity$date, FUN=sum, na.rm=TRUE)
@@ -39,6 +35,7 @@ avgsteps <- aggregate(activity$steps~activity$interval, FUN=mean, na.rm=TRUE)
 names(avgsteps) <- c("interval", "average_steps")
 plot(avgsteps$interval, avgsteps$average_steps, type='l', col="blue", xlab="interval", ylab="steps taken", main = "Average steps taken for each 5 min. time interval")
 ```
+
 ### This will show the 5 min. time interval that, on average, contains the maximum number of steps.  It also shows the average step count for that time period.
 ```{r}
 library(plyr)
@@ -76,7 +73,6 @@ median(completesteps$total_steps)
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
-###  This is the panel plot comparing the average number of steps taken per 5-minute period across weekdays and weekends.
 ```{r}
 library(timeDate)
 library(lattice)
