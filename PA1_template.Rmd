@@ -4,22 +4,87 @@ output:
   html_document:
     keep_md: true
 ---
-
+# Analysis of Fitbit Monitoring Data
 
 ## Loading and preprocessing the data
+```{r}
+mainDir <- getwd()
 
+url <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(url, "activity_monitoring_data.zip")
+ifelse(!dir.exists(file.path(mainDir, "RepData_PeerAssessment1")),
+       dir.create(file.path(mainDir, "RepData_PeerAssessment1")), FALSE)
+unzip("activity_monitoring_data.zip", exdir = "./RepData_PeerAssessment1")
+setwd("./RepData_PeerAssessment1")
 
+activity <- read.csv("activity.csv")
+```
+### Here is a histogram showing the total number of steps taken each day
+```{r}
+daystep <- aggregate(activity$steps~activity$date, FUN=sum, na.rm=TRUE)
+names(daystep) <- c("date", "total_steps")
+hist(daystep$total_steps, breaks = 10)
+```
 
 ## What is mean total number of steps taken per day?
-
+```{r}
+mean(daystep$total_steps)
+median(daystep$total_steps)
+```
 
 
 ## What is the average daily activity pattern?
-
-
+```{r}
+avgsteps <- aggregate(activity$steps~activity$interval, FUN=mean, na.rm=TRUE)
+names(avgsteps) <- c("interval", "average_steps")
+plot(avgsteps$interval, avgsteps$average_steps, type='l', col="blue", xlab="interval", ylab="steps taken", main = "Average steps taken for each 5 min. time interval")
+```
+### This will show the 5 min. time interval that, on average, contains the maximum number of steps.  It also shows the average step count for that time period.
+```{r}
+library(plyr)
+avg_step_order <- ddply(avgsteps, "average_steps",
+          function(x) x[which.max(x$average_steps),])
+tail(avg_step_order, 1)
+```
 
 ## Imputing missing values
+### This code finds the number of missing values and imputes a value to replace them.
+```{r}
+colSums(is.na(activity))
+# this shows there are 2,304 missing values in steps column and 0 elsewhere
+# now to impute the data using the mice package
+library(mice)
+tempData <- mice(activity, maxit=50, method="pmm", m = 5, seed = 500)
+completeData <- complete(tempData, 1)
+#  Show there are no NA values in new data
+colSums(is.na(completeData))
+```
 
+### This is a histogram of total # of steps taken each day after missing values imputed
+```{r}
+completesteps <- aggregate(completeData$steps~completeData$date, FUN=sum)
+names(completesteps) <- c("date", "total_steps")
+hist(completesteps$total_steps, breaks=10)
+```
+
+###  Here are the mean and median values after imputing missing values.
+```{r}
+mean(completesteps$total_steps)
+median(completesteps$total_steps)
+```
+### by comparison we see that the mean is 366.3 lower and median 326 lower after imputing values.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+###  This is the panel plot comparing the average number of steps taken per 5-minute period across weekdays and weekends.
+```{r}
+library(timeDate)
+library(lattice)
+completeData$weekday <- as.factor(isWeekend(completeData$date))
+levels(completeData$weekday) <- c("weekday", "weekend")
+sortedData <- aggregate(completeData$steps~completeData$interval + 
+            completeData$weekday, FUN=mean)
+names(sortedData) <- c("interval", "weekday", "avg_steps")
+xyplot(avg_steps~interval | factor(weekday), data = sortedData, type='l',
+       ylab= "Number of steps", layout=c(1,2))
+```
